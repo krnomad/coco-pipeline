@@ -98,7 +98,7 @@ jacocoTestCoverageVerification {
     violationRules {
         rule {
             excludes = ['util.Logger']
-            enabled = true
+            enabled = false
 
             element = 'CLASS'
             limit {
