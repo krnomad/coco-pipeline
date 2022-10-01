@@ -1,0 +1,123 @@
+plugins {
+    id 'groovy'
+    id 'jacoco'
+}
+
+version '0.0.1'
+
+repositories {
+    mavenCentral()
+    jcenter()
+
+    maven { url('https://repo.jenkins-ci.org/releases') }
+    maven { url('https://repo.jenkins-ci.org/public') }
+}
+
+dependencies {
+    implementation 'com.cloudbees:groovy-cps:1.32'
+    implementation 'org.jenkins-ci.main:jenkins-core:2.324'
+    implementation 'org.jsoup:jsoup:1.14.3'
+
+    implementation group: 'org.jenkins-ci.plugins', name: 'git', version: '4.10.1', ext: 'jar'
+    implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-api', version: '2.47', ext: 'jar'
+    implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-cps', version: '2.93', ext: 'jar'
+    implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-support', version: '3.8', ext: 'jar'
+    implementation group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-job', version: '2.42', ext: 'jar'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.7.1'
+    testRuntimeOnly('org.junit.vintage:junit-vintage-engine:5.4.0')
+    testImplementation 'com.lesfurets:jenkins-pipeline-unit:1.9'
+    testImplementation 'org.xmlunit:xmlunit-core:2.6.3'
+    testImplementation 'org.yaml:snakeyaml:1.30'
+    testImplementation "org.slf4j:slf4j-simple:1.7.9"
+}
+
+sourceSets {
+    main {
+        groovy {
+            srcDirs = ['src', 'vars']
+        }
+        resources {
+            srcDirs = ['resources']
+        }
+    }
+    test {
+        groovy {
+            srcDirs = ['test']
+        }
+        resources {
+            srcDirs = ['test/resources']
+        }
+    }
+}
+
+groovydoc {
+    use = true
+    groovyClasspath = configurations.compile
+    source = sourceSets.main.groovy
+    overviewText = resources.text.fromFile("index.html")
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy 'testCoverage'
+}
+
+task testCoverage(type: Test) {
+    group 'verification'
+    description 'Runs the unit tests with coverage'
+
+    dependsOn(':test',
+            ':jacocoTestReport',
+            ':jacocoTestCoverageVerification')
+
+    tasks['jacocoTestReport'].mustRunAfter(tasks['test'])
+    tasks['jacocoTestCoverageVerification'].mustRunAfter(tasks['jacocoTestReport'])
+}
+
+// Ja coco
+jacoco {
+    toolVersion = '0.8.5'
+
+    //reportsDir = file("$buildDir/jacoco")
+}
+
+jacocoTestReport {
+    reports {
+        // Test report file type
+        html.enabled true
+        xml.enabled false
+        csv.enabled true
+    }
+
+    finalizedBy 'jacocoTestCoverageVerification'
+}
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            excludes = ['util.Logger']
+            enabled = true
+
+            element = 'CLASS'
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.90
+            }
+
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.01
+            }
+
+            limit {
+                counter = 'LINE'
+                value = 'TOTALCOUNT'
+                maximum = 30
+            }
+        }
+    }
+}
